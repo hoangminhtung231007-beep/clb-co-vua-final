@@ -27,15 +27,22 @@ app.get('/api/players', async (req, res) => {
 
 // 2. Thêm thành viên mới (Dùng cho Admin)
 app.post('/api/players', async (req, res) => {
-    const { name, elo } = req.body;
+    const { id, name, elo } = req.body; // Thêm 'id' vào đây để lấy từ ô nhập liệu
+    
     const { data, error } = await supabase
         .from('players')
-        .insert([{ name, elo: parseInt(elo) || 1000 }]);
+        .insert([{ 
+            id: id,      // Gửi ID bạn nhập (ví dụ TV01)
+            name: name, 
+            elo: parseInt(elo) || 1000 
+        }]);
 
-    if (error) return res.status(500).send(error.message);
+    if (error) {
+        console.error(error);
+        return res.status(500).send(error.message);
+    }
     res.json({ message: "Thêm thành công!" });
 });
-
 // 3. Cập nhật điểm Elo (Dùng cho Admin)
 app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
