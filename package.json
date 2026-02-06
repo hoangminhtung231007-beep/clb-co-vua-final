@@ -1,18 +1,15 @@
 {
-  "name": "chess-club",
+  "name": "clb-co-vua-final",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
-  "scripts":
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "express": "^5.2.1",
-    "sqlite3": "^5.1.7"
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "body-parser": "^1.20.2"
   }
 }
