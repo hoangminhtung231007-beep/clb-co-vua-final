@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin CLB Cờ Vua</title>
+    <style>
+        :root { --admin: #e67e22; --dark: #2c3e50; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { background: white; color: #333; padding: 20px; border-radius: 12px; width: 100%; max-width: 600px; margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-undo { background: #555; margin-bottom: 10px; }
+        .btn-del { background: #e74c3c; width: auto; padding: 5px 10px; font-size: 11px; }
+        .att-btn { width: 45px; padding: 5px; font-size: 10px; margin-right: 2px; }
+        #logBox { height: 150px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; border: 1px solid #eee; }
+        #adminContent { display: none; width: 100%; max-width: 600px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { border-bottom: 1px solid #eee; padding: 8px; }
+    </style>
+</head>
+<body>
+    <div id="loginBox" class="card">
+        <h2 style="text-align:center">🔐 ADMIN LOGIN</h2>
+        <input type="password" id="passInput" placeholder="Mật khẩu admin123...">
+        <button onclick="checkPass()" style="background:var(--admin)">ĐĂNG NHẬP</button>
+    </div>
+
+    <div id="adminContent">
+        <button class="btn-undo" onclick="undo()">↩️ HOÀN TÁC THAO TÁC VỪA RỒI</button>
+        
+        <div class="card">
+            <h2>⚔️ TRẬN ĐẤU</h2>
+            <div style="display:flex; gap:10px">
+                <input type="text" id="idA" placeholder="ID A">
+                <input type="text" id="idB" placeholder="ID B">
+            </div>
+            <select id="winnerId"><option value="A">A thắng</option><option value="B">B thắng</option><option value="0">Hòa</option></select>
+            <button onclick="updateMatch()">CẬP NHẬT</button>
+        </div>
+
+        <div class="card">
+            <h2>👥 THÀNH VIÊN</h2>
+            <input type="text" id="q" onkeyup="search()" placeholder="🔍 Tìm tên hoặc ID..." style="border: 2px solid var(--admin)">
+            <table id="adminTable"><tbody></tbody></table>
+            <hr>
+            <div style="display:flex; gap:10px">
+                <input type="text" id="newName" placeholder="Tên MTV">
+                <input type="text" id="newId" placeholder="ID">
+            </div>
+            <button onclick="add()" style="background:var(--admin)">THÊM MỚI</button>
+        </div>
+
+        <div class="card">
+            <h2>📜 NHẬT KÝ</h2>
+            <div id="logBox"></div>
+        </div>
+    </div>
+
+    <script>
+        const PASS = "admin123";
+        function checkPass() {
+            if(document.getElementById('passInput').value === PASS) {
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                refresh();
+            } else alert("Sai!");
+        }
+
+        async function refresh() { loadTable(); loadLogs(); }
+
+        async function loadTable() {
+            const res = await fetch('/api/ranking');
+            const data = await res.json();
+            document.querySelector('#adminTable tbody').innerHTML = data.map(u => `
+                <tr>
+                    <td><b>${u.name}</b> <small>(${u.id})</small></td>
+                    <td align="right">
+                        <button class="att-btn" style="background:#2ecc71" onclick="att('${u.id}','present','${u.name}')">CÓ</button>
+                        <button class="att-btn" style="background:#f1c40f" onclick="att('${u.id}','late','${u.name}')">M</button>
+                        <button class="att-btn" style="background:#e74c3c" onclick="att('${u.id}','absent','${u.name}')">V</button>
+                        <button class="btn-del" onclick="del('${u.id}')">X</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadLogs() {
+            const res = await fetch('/api/logs');
+            const data = await res.json();
+            document.getElementById('logBox').innerHTML = data.map(l => `<p style="margin:4px 0; border-bottom:1px solid #eee"><b>[${l.timestamp.split(' ')[1]}]</b> ${l.content}</p>`).join('');
+        }
+
+        function search() {
+            let v = document.getElementById('q').value.toLowerCase();
+            document.querySelectorAll('#adminTable tbody tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none');
+        }
+
+        async function undo() {
+            if(!confirm("Hủy hành động cuối?")) return;
+            const res = await fetch('/api/undo', { method: 'POST' });
+            if(res.ok) refresh(); else alert(await res.text());
+        }
+
+        async function att(id, type, name) {
+            await fetch('/api/attendance', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, type, name}) });
+            refresh();
+        }
+
+        async function updateMatch() {
+            const idA = document.getElementById('idA').value, idB = document.getElementById('idB').value;
+            let win = document.getElementById('winnerId').value;
+            let winnerId = win === 'A' ? idA : (win === 'B' ? idB : '0');
+            await fetch('/api/match', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({idA, idB, winnerId}) });
+            refresh();
+        }
+
+        async function add() {
+            await fetch('/api/members', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: document.getElementById('newName').value, id: document.getElementById('newId').value}) });
+            refresh();
+        }
+
+        async function del(id) {
+            if(confirm("Xóa?")) { await fetch(`/api/members/${id}`, { method: 'DELETE' }); refresh(); }
+        }
+    </script>
+</body>
+</html>

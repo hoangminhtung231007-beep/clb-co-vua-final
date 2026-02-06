@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bảng Xếp Hạng CLB Cờ Vua</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); width: 100%; max-width: 800px; margin-bottom: 20px; }
+        canvas { max-height: 300px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #1a2a6c; color: white; padding: 12px; }
+        td { padding: 12px; text-align: center; border-bottom: 1px solid #eee; }
+        .top-1 { background: #fff9c4; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 style="text-align: center; color: #1a2a6c;">🏆 PHONG ĐỘ TOP 5 KỲ THỦ</h1>
+        <canvas id="eloChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h1 style="text-align: center;">📊 BẢNG XẾP HẠNG CHI TIẾT</h1>
+        <table>
+            <thead><tr><th>Hạng</th><th>Kỳ thủ</th><th>Elo</th><th>Cấp bậc</th></tr></thead>
+            <tbody id="data"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let myChart;
+
+        async function load() {
+            const res = await fetch('/api/ranking');
+            const data = await res.json();
+            
+            // 1. Cập nhật bảng xếp hạng
+            document.getElementById('data').innerHTML = data.map((u, i) => `
+                <tr class="${i === 0 ? 'top-1' : ''}">
+                    <td>${i + 1}</td>
+                    <td><b>${u.name}</b> <small>(ID: ${u.id})</small></td>
+                    <td style="color:#e67e22; font-weight:bold">${u.elo}</td>
+                    <td>${u.rank}</td>
+                </tr>
+            `).join('');
+
+            // 2. Cập nhật biểu đồ (Lấy Top 5)
+            const top5 = data.slice(0, 5);
+            const ctx = document.getElementById('eloChart').getContext('2d');
+            
+            if (myChart) myChart.destroy(); // Xóa biểu đồ cũ để vẽ mới khi có data thay đổi
+
+            myChart = new Chart(ctx, {
+                type: 'bar', // Có thể đổi thành 'line' nếu muốn dạng đường
+                data: {
+                    labels: top5.map(u => u.name),
+                    datasets: [{
+                        label: 'Điểm Elo hiện tại',
+                        data: top5.map(u => u.elo),
+                        backgroundColor: ['#ffd700', '#c0c0c0', '#cd7f32', '#3498db', '#9b59b6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    scales: { y: { beginAtZero: false, min: Math.min(...top5.map(u => u.elo)) - 50 } }
+                }
+            });
+        }
+
+        load();
+        setInterval(load, 10000); // Tự động làm mới sau 10 giây
+    </script>
+</body>
+</html>
